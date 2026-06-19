@@ -14,47 +14,13 @@ rpm-build
 rpmdevtools
 rpmautospec
 
-# fwupd build dependencies.
-ModemManager-glib-devel
-cairo-devel
-cairo-gobject-devel
-freetype
-fontconfig
-gettext
-gi-docgen
-glib2-devel
-gnutls-devel
-gnutls-utils
-google-noto-sans-cjk-ttc-fonts
-gobject-introspection-devel
-hwdata
-libblkid-devel
-libcurl-devel
-libdrm-devel
-libmbim-devel
-libmnl-devel
-libqmi-devel
-libusb1-devel
-libxmlb-devel
+# fwupd-efi build dependencies.
+gcc
+gnu-efi-devel
 meson
-pango-devel
-passim-devel
-pkgconfig(bash-completion)
-polkit
-polkit-devel
+pesign
 python3
-python3-cairo
-python3-gobject
-python3-jinja2
-python3-packaging
-readline-devel
-sqlite-devel
-systemd
-systemd-devel
-tpm2-tss-devel
-vala
-valgrind
-valgrind-devel
+python3-pefile
 
 # grub2 build dependencies.
 autoconf
@@ -68,13 +34,10 @@ efi-srpm-macros
 flex
 freetype-devel
 fuse3-devel
-gcc
 gettext-devel
 git
 help2man
 ncurses-devel
-pesign
-python3
 rpm-devel
 rpm-libs
 squashfs-tools

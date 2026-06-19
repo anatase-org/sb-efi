@@ -1,29 +1,29 @@
 ARG FEDORA_VERSION=44
-FROM sb-builder:f${FEDORA_VERSION} AS fwupd-build
+FROM sb-builder:f${FEDORA_VERSION} AS fwupd-efi-build
 
 ARG FEDORA_VERSION=44
 COPY . /work
-WORKDIR /work/fwupd
+WORKDIR /work/fwupd-efi
 
 RUN set -eux; \
     mkdir -p \
-        /build/fwupd/BUILD \
-        /build/fwupd/BUILDROOT \
-        /build/fwupd/RPMS \
-        /build/fwupd/SOURCES \
-        /build/fwupd/SPECS \
-        /build/fwupd/SRPMS \
+        /build/fwupd-efi/BUILD \
+        /build/fwupd-efi/BUILDROOT \
+        /build/fwupd-efi/RPMS \
+        /build/fwupd-efi/SOURCES \
+        /build/fwupd-efi/SPECS \
+        /build/fwupd-efi/SRPMS \
         /rpms; \
     fedpkg --release "f${FEDORA_VERSION}" sources; \
-    rpmbuild -ba fwupd.spec \
-        --define "_topdir /build/fwupd" \
-        --define "_builddir /build/fwupd/BUILD" \
-        --define "_buildrootdir /build/fwupd/BUILDROOT" \
-        --define "_rpmdir /build/fwupd/RPMS" \
-        --define "_sourcedir /work/fwupd" \
-        --define "_specdir /work/fwupd" \
-        --define "_srcrpmdir /build/fwupd/SRPMS"; \
-    find /build/fwupd/RPMS /build/fwupd/SRPMS -type f -name '*.rpm' -exec cp -t /rpms {} +
+    rpmbuild -ba fwupd-efi.spec \
+        --define "_topdir /build/fwupd-efi" \
+        --define "_builddir /build/fwupd-efi/BUILD" \
+        --define "_buildrootdir /build/fwupd-efi/BUILDROOT" \
+        --define "_rpmdir /build/fwupd-efi/RPMS" \
+        --define "_sourcedir /work/fwupd-efi" \
+        --define "_specdir /work/fwupd-efi" \
+        --define "_srcrpmdir /build/fwupd-efi/SRPMS"; \
+    find /build/fwupd-efi/RPMS /build/fwupd-efi/SRPMS -type f -name '*.rpm' -exec cp -t /rpms {} +
 
 ARG FEDORA_VERSION=44
 FROM sb-builder:f${FEDORA_VERSION} AS grub2-build
@@ -53,5 +53,5 @@ RUN set -eux; \
     find /build/grub2/RPMS /build/grub2/SRPMS -type f -name '*.rpm' -exec cp -t /rpms {} +
 
 FROM scratch
-COPY --from=fwupd-build /rpms/ /rpms/
+COPY --from=fwupd-efi-build /rpms/ /rpms/
 COPY --from=grub2-build /rpms/ /rpms/

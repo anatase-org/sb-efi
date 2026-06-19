@@ -1,6 +1,6 @@
-[submodule "fwupd"]
-	path = fwupd
-	url = https://src.fedoraproject.org/rpms/fwupd
+[submodule "fwupd-efi"]
+	path = fwupd-efi
+	url = https://src.fedoraproject.org/rpms/fwupd-efi
 [submodule "grub2"]
 	path = grub2
 	url = https://src.fedoraproject.org/rpms/grub2
