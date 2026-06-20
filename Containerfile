@@ -2,10 +2,22 @@ ARG FEDORA_VERSION=44
 FROM sb-builder:f${FEDORA_VERSION} AS fwupd-efi-build
 
 ARG FEDORA_VERSION=44
+ARG PE_SIGNING_TOKEN=
+ARG PE_SIGNING_CERT=
 COPY . /work
 WORKDIR /work/fwupd-efi
 
-RUN set -eux; \
+RUN --mount=type=secret,id=pe_signing_pin set -eux; \
+    if [ -n "${PE_SIGNING_TOKEN:-}" ] || [ -n "${PE_SIGNING_CERT:-}" ]; then \
+        : > /root/.rpmmacros; \
+        if [ -n "${PE_SIGNING_TOKEN:-}" ]; then printf '%%pe_signing_token %s\n' "${PE_SIGNING_TOKEN}" >> /root/.rpmmacros; fi; \
+        if [ -n "${PE_SIGNING_CERT:-}" ]; then printf '%%pe_signing_cert %s\n' "${PE_SIGNING_CERT}" >> /root/.rpmmacros; fi; \
+        printf '%%_pesign /usr/local/bin/pesign-with-pin\n' >> /root/.rpmmacros; \
+        [ -s /run/secrets/pe_signing_pin ]; \
+        rm -f /run/pesign/socket /var/run/pesign/socket; \
+        printf '#!/usr/bin/env bash\nexec /usr/bin/pesign --pinfile /run/secrets/pe_signing_pin "$@"\n' > /usr/local/bin/pesign-with-pin; \
+        chmod 0755 /usr/local/bin/pesign-with-pin; \
+    fi; \
     mkdir -p \
         /build/fwupd-efi/BUILD \
         /build/fwupd-efi/BUILDROOT \
@@ -29,10 +41,22 @@ ARG FEDORA_VERSION=44
 FROM sb-builder:f${FEDORA_VERSION} AS grub2-build
 
 ARG FEDORA_VERSION=44
+ARG PE_SIGNING_TOKEN=
+ARG PE_SIGNING_CERT=
 COPY . /work
 WORKDIR /work/grub2
 
-RUN set -eux; \
+RUN --mount=type=secret,id=pe_signing_pin set -eux; \
+    if [ -n "${PE_SIGNING_TOKEN:-}" ] || [ -n "${PE_SIGNING_CERT:-}" ]; then \
+        : > /root/.rpmmacros; \
+        if [ -n "${PE_SIGNING_TOKEN:-}" ]; then printf '%%pe_signing_token %s\n' "${PE_SIGNING_TOKEN}" >> /root/.rpmmacros; fi; \
+        if [ -n "${PE_SIGNING_CERT:-}" ]; then printf '%%pe_signing_cert %s\n' "${PE_SIGNING_CERT}" >> /root/.rpmmacros; fi; \
+        printf '%%_pesign /usr/local/bin/pesign-with-pin\n' >> /root/.rpmmacros; \
+        [ -s /run/secrets/pe_signing_pin ]; \
+        rm -f /run/pesign/socket /var/run/pesign/socket; \
+        printf '#!/usr/bin/env bash\nexec /usr/bin/pesign --pinfile /run/secrets/pe_signing_pin "$@"\n' > /usr/local/bin/pesign-with-pin; \
+        chmod 0755 /usr/local/bin/pesign-with-pin; \
+    fi; \
     mkdir -p \
         /build/grub2/BUILD \
         /build/grub2/BUILDROOT \

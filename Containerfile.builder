@@ -18,6 +18,9 @@ rpmautospec
 gcc
 gnu-efi-devel
 meson
+nss-tools
+opensc
+pcsc-lite-libs
 pesign
 python3
 python3-pefile
@@ -49,3 +52,7 @@ PACKAGES
 dnf -y install ${packages}
 rm -rf /var/cache/dnf
 EOF
+
+RUN rm -rf /etc/pki/pesign && \
+    install -d -m 0755 /etc/pki/pesign && \
+    certutil -N -d sql:/etc/pki/pesign --empty-password

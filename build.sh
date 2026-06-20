@@ -3,6 +3,15 @@ FEDORA_VERSION=${FEDORA_VERSION:-44}
 
 set -euo pipefail
 
+if [ -f .env ]; then
+    set -a
+    . ./.env
+    set +a
+fi
+
+PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN:-}
+PE_SIGNING_CERT=${PE_SIGNING_CERT:-}
+
 BUILDER_IMAGE="sb-builder:f${FEDORA_VERSION}"
 RPM_IMAGE="sb-rpms:f${FEDORA_VERSION}"
 RPM_OUTPUT_DIR="rpms"
@@ -33,12 +42,33 @@ else
 fi
 
 printf 'Building RPM artifact image %s\n' "${RPM_IMAGE}"
-podman build \
-    --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
-    --env "FEDORA_VERSION=${FEDORA_VERSION}" \
-    -f Containerfile \
-    -t "${RPM_IMAGE}" \
-    .
+
+if [ -n "${PE_SIGNING_TOKEN}" ] || [ -n "${PE_SIGNING_CERT}" ]; then
+    [ -n "${PE_SIGNING_TOKEN}" ] || die "PE_SIGNING_TOKEN is required for signing"
+    [ -n "${PE_SIGNING_CERT}" ] || die "PE_SIGNING_CERT is required for signing"
+    [ -S /run/pcscd/pcscd.comm ] || die "pcscd socket not found at /run/pcscd/pcscd.comm"
+    read -r -s -p "Enter Pin: " pin
+    printf '\n'
+    podman build \
+        --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
+        --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
+        --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
+        --secret id=pe_signing_pin,src=<(printf '%s\n' "${pin}") \
+        --volume /run/pcscd:/run/pcscd \
+        --env "FEDORA_VERSION=${FEDORA_VERSION}" \
+        -f Containerfile \
+        -t "${RPM_IMAGE}" \
+        .
+else
+    podman build \
+        --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
+        --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
+        --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
+        --env "FEDORA_VERSION=${FEDORA_VERSION}" \
+        -f Containerfile \
+        -t "${RPM_IMAGE}" \
+        .
+fi
 
 container_id=''
 cleanup() {
