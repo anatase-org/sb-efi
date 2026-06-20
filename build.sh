@@ -13,7 +13,6 @@ PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN:-}
 PE_SIGNING_CERT=${PE_SIGNING_CERT:-}
 
 BUILDER_IMAGE="sb-builder:f${FEDORA_VERSION}"
-RPM_IMAGE="sb-efi:f${FEDORA_VERSION}-x86_64"
 RPM_OUTPUT_DIR="rpms"
 
 die() {
@@ -26,6 +25,8 @@ case "${FEDORA_VERSION}" in
         die "FEDORA_VERSION must be a Fedora release number"
         ;;
 esac
+
+RPM_IMAGE="sb-efi:f${FEDORA_VERSION}-$(uname -m)"
 
 command -v podman >/dev/null 2>&1 || die "podman is required"
 
