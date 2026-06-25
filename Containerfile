@@ -25,6 +25,7 @@ RUN --mount=type=secret,id=pe_signing_pin set -eux; \
         /build/fwupd-efi/SOURCES \
         /build/fwupd-efi/SPECS \
         /build/fwupd-efi/SRPMS \
+        /srpms \
         /rpms; \
     fedpkg --release "f${FEDORA_VERSION}" sources; \
     rpmbuild -ba fwupd-efi.spec \
@@ -35,7 +36,8 @@ RUN --mount=type=secret,id=pe_signing_pin set -eux; \
         --define "_sourcedir /work/fwupd-efi" \
         --define "_specdir /work/fwupd-efi" \
         --define "_srcrpmdir /build/fwupd-efi/SRPMS"; \
-    find /build/fwupd-efi/RPMS /build/fwupd-efi/SRPMS -type f -name '*.rpm' -exec cp -t /rpms {} +
+    find /build/fwupd-efi/SRPMS -type f -name '*.rpm' -exec cp -t /srpms {} +; \
+    find /build/fwupd-efi/RPMS -type f -name '*.rpm' -exec cp -t /rpms {} +
 
 ARG FEDORA_VERSION=44
 FROM sb-builder:f${FEDORA_VERSION} AS grub2-build
@@ -64,6 +66,7 @@ RUN --mount=type=secret,id=pe_signing_pin set -eux; \
         /build/grub2/SOURCES \
         /build/grub2/SPECS \
         /build/grub2/SRPMS \
+        /srpms \
         /rpms; \
     fedpkg --release "f${FEDORA_VERSION}" sources; \
     rpmbuild -ba grub2.spec \
@@ -74,7 +77,8 @@ RUN --mount=type=secret,id=pe_signing_pin set -eux; \
         --define "_sourcedir /work/grub2" \
         --define "_specdir /work/grub2" \
         --define "_srcrpmdir /build/grub2/SRPMS"; \
-    find /build/grub2/RPMS /build/grub2/SRPMS -type f -name '*.rpm' -exec cp -t /rpms {} +
+    find /build/grub2/SRPMS -type f -name '*.rpm' -exec cp -t /srpms {} +; \
+    find /build/grub2/RPMS -type f -name '*.rpm' -exec cp -t /rpms {} +
 
 FROM scratch
 COPY --from=fwupd-efi-build /rpms/ /rpms/
