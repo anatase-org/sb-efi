@@ -27,7 +27,7 @@ RUN --mount=type=secret,id=pe_signing_pin set -eux; \
         /build/fwupd-efi/SRPMS \
         /srpms \
         /rpms; \
-    fedpkg --release "f${FEDORA_VERSION}" sources; \
+    fedpkg --release "f${FEDORA_VERSION}" --name fwupd-efi --namespace rpms sources; \
     rpmbuild -ba fwupd-efi.spec \
         --define "_topdir /build/fwupd-efi" \
         --define "_builddir /build/fwupd-efi/BUILD" \
@@ -68,7 +68,7 @@ RUN --mount=type=secret,id=pe_signing_pin set -eux; \
         /build/grub2/SRPMS \
         /srpms \
         /rpms; \
-    fedpkg --release "f${FEDORA_VERSION}" sources; \
+    fedpkg --release "f${FEDORA_VERSION}" --name grub2 --namespace rpms sources; \
     rpmbuild -ba grub2.spec \
         --define "_topdir /build/grub2" \
         --define "_builddir /build/grub2/BUILD" \
