@@ -12,7 +12,7 @@ fi
 PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN:-}
 PE_SIGNING_CERT=${PE_SIGNING_CERT:-}
 
-BUILDER_IMAGE="sb-builder:f${FEDORA_VERSION}"
+BUILDER_IMAGE="sb-builder:f${FEDORA_VERSION}-$(uname -m)"
 RPM_OUTPUT_DIR="rpms"
 
 die() {
@@ -48,18 +48,9 @@ if [ -n "${PE_SIGNING_TOKEN}" ] || [ -n "${PE_SIGNING_CERT}" ]; then
     [ -n "${PE_SIGNING_TOKEN}" ] || die "PE_SIGNING_TOKEN is required for signing"
     [ -n "${PE_SIGNING_CERT}" ] || die "PE_SIGNING_CERT is required for signing"
     [ -S /run/pcscd/pcscd.comm ] || die "pcscd socket not found at /run/pcscd/pcscd.comm"
-    read -r -s -p "Enter Pin: " pin
+    read -r -s -p "Enter Pin: " PIN
     printf '\n'
-    podman build \
-        --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
-        --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
-        --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
-        --secret id=pe_signing_pin,src=<(printf '%s\n' "${pin}") \
-        --volume /run/pcscd:/run/pcscd \
-        --env "FEDORA_VERSION=${FEDORA_VERSION}" \
-        -f Containerfile \
-        -t "${RPM_IMAGE}" \
-        .
+    export PIN
 else
     podman build \
         --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
@@ -71,16 +62,14 @@ else
         .
 fi
 
-container_id=''
-cleanup() {
-    if [ -n "${container_id}" ]; then
-        podman rm -f "${container_id}" >/dev/null 2>&1 || true
-    fi
-}
-trap cleanup EXIT
-
-mkdir -p "${RPM_OUTPUT_DIR}"
-container_id="$(podman create "${RPM_IMAGE}")"
-podman cp "${container_id}:/rpms/." "${RPM_OUTPUT_DIR}/"
-
-printf 'Built %s and copied RPMs to ./%s/\n' "${RPM_IMAGE}" "${RPM_OUTPUT_DIR}"
+export PIN
+podman build \
+    --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
+    --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
+    --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
+    --secret "id=pe_signing_pin,env=PIN" \
+    --volume /run/pcscd:/run/pcscd \
+    --env "FEDORA_VERSION=${FEDORA_VERSION}" \
+    -f Containerfile \
+    -t "${RPM_IMAGE}" \
+    .
