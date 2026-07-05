@@ -12,6 +12,7 @@ fi
 
 PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN:-}
 PE_SIGNING_CERT=${PE_SIGNING_CERT:-}
+PE_SIGNING_PIN=${PE_SIGNING_PIN:-0}
 
 BUILDER_IMAGE="sb-builder:f${FEDORA_VERSION}-$(uname -m)"
 RPM_OUTPUT_DIR="rpms"
@@ -48,26 +49,46 @@ if [ -n "${PE_SIGNING_TOKEN}" ] || [ -n "${PE_SIGNING_CERT}" ]; then
     [ -n "${PE_SIGNING_TOKEN}" ] || die "PE_SIGNING_TOKEN is required for signing"
     [ -n "${PE_SIGNING_CERT}" ] || die "PE_SIGNING_CERT is required for signing"
     [ -S /run/pcscd/pcscd.comm ] || die "pcscd socket not found at /run/pcscd/pcscd.comm"
-    read -r -s -p "Enter Pin: " PIN
-    printf '\n'
-    export PIN
-    podman build \
-        --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
-        --build-arg "ARCH=${ARCH}" \
-        --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
-        --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
-        --secret "id=pe_signing_pin,env=PIN" \
-        --volume /run/pcscd:/run/pcscd \
-        --env "FEDORA_VERSION=${FEDORA_VERSION}" \
-        -f Containerfile \
-        -t "${RPM_IMAGE}" \
-        .
+
+    build_cmd=(
+        podman build
+        --build-arg "FEDORA_VERSION=${FEDORA_VERSION}"
+        --build-arg "ARCH=${ARCH}"
+        --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}"
+        --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}"
+        --build-arg "PE_SIGNING_PIN=${PE_SIGNING_PIN}"
+        --env "FEDORA_VERSION=${FEDORA_VERSION}"
+        -f Containerfile
+        -t "${RPM_IMAGE}"
+        --volume /run/pcscd:/run/pcscd
+    )
+
+    case "${PE_SIGNING_PIN}" in
+        0)
+            ;;
+        1)
+            read -r -s -p "Enter Pin: " PIN
+            printf '\n'
+            export PIN
+            build_cmd=(
+                "${build_cmd[@]}"
+                --secret "id=pe_signing_pin,env=PIN"
+            )
+            ;;
+        *)
+            die "PE_SIGNING_PIN must be 0 or 1"
+            ;;
+    esac
+
+    "${build_cmd[@]}" .
 else
+    [ "${PE_SIGNING_PIN}" = 0 ] || die "PE_SIGNING_PIN=1 requires PE_SIGNING_TOKEN and PE_SIGNING_CERT"
     podman build \
         --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
         --build-arg "ARCH=${ARCH}" \
         --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
         --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
+        --build-arg "PE_SIGNING_PIN=${PE_SIGNING_PIN}" \
         --env "FEDORA_VERSION=${FEDORA_VERSION}" \
         -f Containerfile \
         -t "${RPM_IMAGE}" \
