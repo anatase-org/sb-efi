@@ -15,9 +15,9 @@ PE_SIGNING_CERT=${PE_SIGNING_CERT:-}
 PE_SIGNING_PIN=${PE_SIGNING_PIN:-0}
 GCP_KMS_KEY=${GCP_KMS_KEY:-}
 GCP_KMS_CERT=${GCP_KMS_CERT:-}
+PUSH_IMAGE=${PUSH_IMAGE:-0}
 
-BUILDER_IMAGE="sb-builder:f${FEDORA_VERSION}-$(uname -m)"
-RPM_OUTPUT_DIR="rpms"
+BUILDER_IMAGE="ghcr.io/anatase-org/sb-builder:f${FEDORA_VERSION}-${ARCH}"
 
 die() {
     printf 'error: %s\n' "$*" >&2
@@ -40,20 +40,13 @@ case "${FEDORA_VERSION}" in
         ;;
 esac
 
-RPM_IMAGE="sb-efi:f${FEDORA_VERSION}-$(uname -m)"
+require_bool PUSH_IMAGE "${PUSH_IMAGE}"
+
+RPM_IMAGE="ghcr.io/anatase-org/sb-efi:f${FEDORA_VERSION}-${ARCH}"
 
 command -v podman >/dev/null 2>&1 || die "podman is required"
 
-if podman image exists "${BUILDER_IMAGE}"; then
-    printf 'Using existing builder image %s\n' "${BUILDER_IMAGE}"
-else
-    printf 'Building builder image %s\n' "${BUILDER_IMAGE}"
-    podman build \
-        --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
-        -f Containerfile.builder \
-        -t "${BUILDER_IMAGE}" \
-        .
-fi
+printf 'Using builder image %s\n' "${BUILDER_IMAGE}"
 
 printf 'Building RPM artifact image %s\n' "${RPM_IMAGE}"
 
@@ -79,8 +72,10 @@ if [ -n "${GCP_KMS_KEY}" ]; then
 
     build_cmd=(
         podman build
+        --pull=always
         --build-arg "FEDORA_VERSION=${FEDORA_VERSION}"
         --build-arg "ARCH=${ARCH}"
+        --build-arg "BUILDER_IMAGE=${BUILDER_IMAGE}"
         --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}"
         --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}"
         --build-arg "PE_SIGNING_PIN=${PE_SIGNING_PIN}"
@@ -102,8 +97,10 @@ elif [ -n "${PE_SIGNING_TOKEN}" ] || [ -n "${PE_SIGNING_CERT}" ]; then
 
     build_cmd=(
         podman build
+        --pull=always
         --build-arg "FEDORA_VERSION=${FEDORA_VERSION}"
         --build-arg "ARCH=${ARCH}"
+        --build-arg "BUILDER_IMAGE=${BUILDER_IMAGE}"
         --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}"
         --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}"
         --build-arg "PE_SIGNING_PIN=${PE_SIGNING_PIN}"
@@ -128,8 +125,10 @@ else
     [ "${PE_SIGNING_PIN}" = 0 ] || die "PE_SIGNING_PIN=1 requires PE_SIGNING_TOKEN and PE_SIGNING_CERT"
     [ -z "${GCP_KMS_CERT}" ] || die "GCP_KMS_CERT requires GCP_KMS_KEY"
     podman build \
+        --pull=always \
         --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
         --build-arg "ARCH=${ARCH}" \
+        --build-arg "BUILDER_IMAGE=${BUILDER_IMAGE}" \
         --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
         --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
         --build-arg "PE_SIGNING_PIN=${PE_SIGNING_PIN}" \
@@ -137,4 +136,9 @@ else
         -f Containerfile \
         -t "${RPM_IMAGE}" \
         .
+fi
+
+if [ "${PUSH_IMAGE}" = 1 ]; then
+    printf 'Pushing RPM artifact image %s\n' "${RPM_IMAGE}"
+    podman push "${RPM_IMAGE}"
 fi

@@ -1,0 +1,4 @@
+# Secureboot Applications and Builder repository
+This repository hosts the source code for building grub and the efi capsule for fwupd using the anatase keys. The builder is built in a separate action and cached to enable for reproducible builds and reduce exposure to fedora repositories. In addition, the builder is reused for the [kernel repository](https://github.com)
+
+For your own builds, signing is supported both with a local yubikey / pin combination and gcloud KMS HSM (hardware backed keys only please). For gcloud KMS, the builder compiles libkmsp11 provided by google such that it is also made available for arm.

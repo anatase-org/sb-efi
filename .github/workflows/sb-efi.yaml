@@ -1,0 +1,59 @@
+name: SB EFI
+
+on:
+  workflow_dispatch:
+    inputs:
+      fedora_version:
+        description: Fedora release version
+        required: false
+        default: "44"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+
+      - name: Login to GHCR
+        run: |
+          printf '%s' "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Build, sign, and push SB EFI image
+        env:
+          FEDORA_VERSION: ${{ inputs.fedora_version }}
+          ARCH: ${{ matrix.arch }}
+          PE_SIGNING_TOKEN: ${{ secrets.PE_SIGNING_TOKEN }}
+          PE_SIGNING_CERT: ${{ secrets.PE_SIGNING_CERT }}
+          PE_SIGNING_PIN: "0"
+          GCP_KMS_KEY: ${{ secrets.GCP_KMS_KEY }}
+          GCP_KMS_CERT: anatase-m002.crt
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+          PUSH_IMAGE: "1"
+        run: ./build.sh
