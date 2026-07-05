@@ -6,16 +6,33 @@ ARG FEDORA_VERSION=44
 ARG PE_SIGNING_TOKEN=
 ARG PE_SIGNING_CERT=
 ARG PE_SIGNING_PIN=0
+ARG GCP_KMS_KEY_RING=
 COPY . /work
 WORKDIR /work/fwupd-efi
 
-RUN --mount=type=secret,id=pe_signing_pin set -eux; \
+RUN --mount=type=secret,id=pe_signing_pin \
+    --mount=type=secret,id=google_application_credentials \
+    --mount=type=secret,id=gcp_kms_certificate \
+    set -eux; \
     if [ -n "${PE_SIGNING_TOKEN:-}" ] || [ -n "${PE_SIGNING_CERT:-}" ]; then \
         : > /root/.rpmmacros; \
         if [ -n "${PE_SIGNING_TOKEN:-}" ]; then printf '%%pe_signing_token %s\n' "${PE_SIGNING_TOKEN}" >> /root/.rpmmacros; fi; \
         if [ -n "${PE_SIGNING_CERT:-}" ]; then printf '%%pe_signing_cert %s\n' "${PE_SIGNING_CERT}" >> /root/.rpmmacros; fi; \
         printf '%%_pesign /usr/local/bin/pesign-with-pin\n' >> /root/.rpmmacros; \
         rm -f /run/pesign/socket /var/run/pesign/socket; \
+        if [ -n "${GCP_KMS_KEY_RING}" ]; then \
+            install -d -m 0700 /run/kmsp11; \
+            { \
+                printf '%s\n' '---' 'tokens:' "  - key_ring: \"${GCP_KMS_KEY_RING}\"" "    label: \"${PE_SIGNING_TOKEN}\""; \
+                if [ -s /run/secrets/gcp_kms_certificate ]; then \
+                    printf '%s\n' '    certs:' '      - |'; \
+                    sed 's/^/        /' /run/secrets/gcp_kms_certificate; \
+                fi; \
+            } > /run/kmsp11/config.yaml; \
+            chmod 0600 /run/kmsp11/config.yaml; \
+            export KMS_PKCS11_CONFIG=/run/kmsp11/config.yaml; \
+            if [ -s /run/secrets/google_application_credentials ]; then export GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/google_application_credentials; fi; \
+        fi; \
         if [ "${PE_SIGNING_PIN}" = 1 ]; then \
             [ -s /run/secrets/pe_signing_pin ]; \
             printf '#!/usr/bin/env bash\nexec /usr/bin/pesign --pinfile /run/secrets/pe_signing_pin "$@"\n' > /usr/local/bin/pesign-with-pin; \
@@ -53,16 +70,33 @@ ARG FEDORA_VERSION=44
 ARG PE_SIGNING_TOKEN=
 ARG PE_SIGNING_CERT=
 ARG PE_SIGNING_PIN=0
+ARG GCP_KMS_KEY_RING=
 COPY . /work
 WORKDIR /work/grub2
 
-RUN --mount=type=secret,id=pe_signing_pin set -eux; \
+RUN --mount=type=secret,id=pe_signing_pin \
+    --mount=type=secret,id=google_application_credentials \
+    --mount=type=secret,id=gcp_kms_certificate \
+    set -eux; \
     if [ -n "${PE_SIGNING_TOKEN:-}" ] || [ -n "${PE_SIGNING_CERT:-}" ]; then \
         : > /root/.rpmmacros; \
         if [ -n "${PE_SIGNING_TOKEN:-}" ]; then printf '%%pe_signing_token %s\n' "${PE_SIGNING_TOKEN}" >> /root/.rpmmacros; fi; \
         if [ -n "${PE_SIGNING_CERT:-}" ]; then printf '%%pe_signing_cert %s\n' "${PE_SIGNING_CERT}" >> /root/.rpmmacros; fi; \
         printf '%%_pesign /usr/local/bin/pesign-with-pin\n' >> /root/.rpmmacros; \
         rm -f /run/pesign/socket /var/run/pesign/socket; \
+        if [ -n "${GCP_KMS_KEY_RING}" ]; then \
+            install -d -m 0700 /run/kmsp11; \
+            { \
+                printf '%s\n' '---' 'tokens:' "  - key_ring: \"${GCP_KMS_KEY_RING}\"" "    label: \"${PE_SIGNING_TOKEN}\""; \
+                if [ -s /run/secrets/gcp_kms_certificate ]; then \
+                    printf '%s\n' '    certs:' '      - |'; \
+                    sed 's/^/        /' /run/secrets/gcp_kms_certificate; \
+                fi; \
+            } > /run/kmsp11/config.yaml; \
+            chmod 0600 /run/kmsp11/config.yaml; \
+            export KMS_PKCS11_CONFIG=/run/kmsp11/config.yaml; \
+            if [ -s /run/secrets/google_application_credentials ]; then export GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/google_application_credentials; fi; \
+        fi; \
         if [ "${PE_SIGNING_PIN}" = 1 ]; then \
             [ -s /run/secrets/pe_signing_pin ]; \
             printf '#!/usr/bin/env bash\nexec /usr/bin/pesign --pinfile /run/secrets/pe_signing_pin "$@"\n' > /usr/local/bin/pesign-with-pin; \
