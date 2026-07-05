@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 FEDORA_VERSION=${FEDORA_VERSION:-44}
+ARCH=${ARCH:-$(uname -m)}
 
 set -euo pipefail
 
@@ -36,7 +37,6 @@ else
     printf 'Building builder image %s\n' "${BUILDER_IMAGE}"
     podman build \
         --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
-        --env "FEDORA_VERSION=${FEDORA_VERSION}" \
         -f Containerfile.builder \
         -t "${BUILDER_IMAGE}" \
         .
@@ -51,9 +51,21 @@ if [ -n "${PE_SIGNING_TOKEN}" ] || [ -n "${PE_SIGNING_CERT}" ]; then
     read -r -s -p "Enter Pin: " PIN
     printf '\n'
     export PIN
+    podman build \
+        --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
+        --build-arg "ARCH=${ARCH}" \
+        --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
+        --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
+        --secret "id=pe_signing_pin,env=PIN" \
+        --volume /run/pcscd:/run/pcscd \
+        --env "FEDORA_VERSION=${FEDORA_VERSION}" \
+        -f Containerfile \
+        -t "${RPM_IMAGE}" \
+        .
 else
     podman build \
         --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
+        --build-arg "ARCH=${ARCH}" \
         --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
         --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
         --env "FEDORA_VERSION=${FEDORA_VERSION}" \
@@ -61,15 +73,3 @@ else
         -t "${RPM_IMAGE}" \
         .
 fi
-
-export PIN
-podman build \
-    --build-arg "FEDORA_VERSION=${FEDORA_VERSION}" \
-    --build-arg "PE_SIGNING_TOKEN=${PE_SIGNING_TOKEN}" \
-    --build-arg "PE_SIGNING_CERT=${PE_SIGNING_CERT}" \
-    --secret "id=pe_signing_pin,env=PIN" \
-    --volume /run/pcscd:/run/pcscd \
-    --env "FEDORA_VERSION=${FEDORA_VERSION}" \
-    -f Containerfile \
-    -t "${RPM_IMAGE}" \
-    .

@@ -1,5 +1,6 @@
-ARG FEDORA_VERSION=44
-FROM sb-builder:f${FEDORA_VERSION} AS fwupd-efi-build
+ARG FEDORA_VERSION=
+ARG ARCH
+FROM sb-builder:f${FEDORA_VERSION}-${ARCH} AS fwupd-efi-build
 
 ARG FEDORA_VERSION=44
 ARG PE_SIGNING_TOKEN=
@@ -39,8 +40,8 @@ RUN --mount=type=secret,id=pe_signing_pin set -eux; \
     find /build/fwupd-efi/SRPMS -type f -name '*.rpm' -exec cp -t /srpms {} +; \
     find /build/fwupd-efi/RPMS -type f -name '*.rpm' -exec cp -t /rpms {} +
 
-ARG FEDORA_VERSION=44
-FROM sb-builder:f${FEDORA_VERSION} AS grub2-build
+ARG FEDORA_VERSION=
+FROM sb-builder:f${FEDORA_VERSION}-${ARCH} AS grub2-build
 
 ARG FEDORA_VERSION=44
 ARG PE_SIGNING_TOKEN=
