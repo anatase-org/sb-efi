@@ -22,9 +22,9 @@ jobs:
       matrix:
         include:
           - arch: x86_64
-            runner: ubuntu-latest
+            runner: ubuntu-26.04
           - arch: aarch64
-            runner: ubuntu-latest-arm
+            runner: ubuntu-26.04-arm
 
     steps:
       - name: Checkout
