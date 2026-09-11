@@ -72,6 +72,10 @@ p11-kit
 
 PACKAGES
 )"
+# ARM64 kernel DTB loader; systemd-boot-unsigned and systemd-ukify are above.
+if [ "$(uname -m)" = aarch64 ]; then
+    packages="${packages} stubble"
+fi
 dnf -y install ${packages}
 rm -rf /var/cache/dnf
 EOF
