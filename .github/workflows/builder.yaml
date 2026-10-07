@@ -6,7 +6,7 @@ on:
       fedora_version:
         description: Fedora release version
         required: false
-        default: "44"
+        default: "45"
         type: string
 
 permissions:
